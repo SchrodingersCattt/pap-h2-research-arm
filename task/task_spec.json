@@ -10,18 +10,18 @@
   "approach": "For DAP-2, PAP-2 and PAP-H2, analyze three independent 1666 K heating trajectories per material. Recover each frame-zero A-site parent by atom identity; locate its first continuous 500 fs loss of parent identity and classify the bond operation at that onset. Independently follow the same site's eight fixed neighboring potassium-centered K–Cl6 units using the 300 K reference, detect persistent local coordination loss over a matched 500 fs duration on the geometry time grid, and compare the chemical and neighborhood-median loss onsets. Keep the per-site records and report seed-resolved patterns rather than treating neighboring sites as independent replicas.",
   "reproduction_target": {
     "summary": "Determine whether persistent A-site chemistry generally precedes loss of neighboring local K–Cl coordination and which persistent first-exit operations predominate across the matched materials.",
-    "scope": "Analysis-only task conditional on independently released, real trajectories and 300 K reference inputs. It does not reproduce potential training or dynamics. Local 1666 K event ordering and reaction-operation distributions are descriptive, not causal or bulk-structure claims; no exact published fraction is requested."
+    "scope": "Atom-resolved analysis of 1666 K trajectories and 300 K references for three A-site variants. Local event ordering and reaction-operation distributions are descriptive, not causal or bulk-structure claims; no exact published fraction is requested."
   },
   "assets": [
     {
       "name": "Atom-identified initial structures and 300 K reference frames for DAP-2, PAP-2 and PAP-H2",
       "type": "dataset",
-      "description": "Define original A-site parents, persistent K–Cl reference geometry and the fixed A-to-K neighborhood. Public access is not yet established; this draft is not runnable."
+      "description": "Define original A-site parents, persistent K–Cl reference geometry and the fixed A-to-K neighborhood."
     },
     {
       "name": "Nine atom-identified 1666 K heating trajectories",
       "type": "dataset",
-      "description": "Three independent 10 fs trajectories per material provide chemical and geometry time series. Public access is not yet established; this draft is not runnable."
+      "description": "Three independent 10 fs trajectories per material provide chemical and geometry time series."
     },
     {
       "name": "Molecular-graph and trajectory-analysis tools",
@@ -83,7 +83,7 @@
     }
   ],
   "scoring": {
-    "summary": "The future verifier must check the per-site record against independently supplied evidence, recompute summary statistics from the submitted sites and assess whether the qualitative interpretation follows. The hidden gold and tolerance are not part of this public review draft."
+    "summary": "Evaluate per-site event coverage and consistency; derive material- and seed-resolved distributions from the site records and assess whether the qualitative interpretation follows."
   },
   "constraints": "Retain all initial A sites, censoring, the 500 fs chemical and geometric persistence criteria, seed identity and 10 fs versus 100 fs sampling distinction. Do not infer the immediate H acceptor from net N–H loss or call local K–Cl loss bulk framework collapse."
 }
