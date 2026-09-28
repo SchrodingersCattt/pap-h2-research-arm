@@ -19,3 +19,5 @@ crystal collapse; net N–H loss does not itself identify the H acceptor.
 - [`environment/Dockerfile`](environment/Dockerfile): Paper2ARM-compatible
   fallback container declaration. Harbor/LBG uses its prebuilt image instead
   of building this file.
+- [`docs/docker.md`](docs/docker.md): verified image metadata and local Docker
+  build/run instructions.
