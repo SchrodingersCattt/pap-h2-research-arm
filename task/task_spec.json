@@ -1,58 +1,41 @@
 {
   "schema_version": "1.0",
   "title": "Chemical first exits and neighboring coordination loss in energetic perovskites",
-  "problem_background": "In a family of energetic perovskites sharing the potassium-perchlorate sublattice, changes at the molecular A site can be resolved separately from loss of neighboring local coordination. An atom-resolved comparison can determine the ordering of these two events without interpreting local coordination loss as bulk lattice collapse.",
+  "problem_background": "In a family of energetic perovskites sharing the potassium-perchlorate sublattice, changes at the molecular A site can be resolved separately from loss of neighboring local coordination. An atom-resolved comparison of recorded events can determine the ordering of these two processes without interpreting local coordination loss as bulk lattice collapse.",
   "environment": {
-    "stack_hint": "Python analysis, molecular graphs and atom-resolved trajectory processing",
+    "stack_hint": "Python standard library for atom-identified event records",
     "internet": true,
     "outputs_dir": "/app/outputs"
   },
-  "approach": "For DAP-2, PAP-2 and PAP-H2, analyze three independent 1666 K heating trajectories per material. Recover each frame-zero A-site parent by atom identity; locate its first continuous 500 fs loss of parent identity and classify the bond operation at that onset. Independently follow the same site's eight fixed neighboring potassium-centered K–Cl6 units using the 300 K reference, detect persistent local coordination loss over a matched 500 fs duration on the geometry time grid, and compare the chemical and neighborhood-median loss onsets. Keep the per-site records and report seed-resolved patterns rather than treating neighboring sites as independent replicas.",
+  "approach": "For DAP-2, PAP-2 and PAP-H2, analyze three seeds per material at 1666 K using the bundled atom-identified first-exit, A-to-K neighborhood and K–Cl6 persistent-loss records. Verify the A-site heavy-atom join and each fixed eight-K neighborhood. Compute the median of its neighbors' 500 fs persistent loss onsets and compare it with the recorded 500 fs persistent chemical first-exit onset. Preserve right-censoring and aggregate by seed before material; neighboring A sites are not independent replicas.",
   "reproduction_target": {
     "summary": "Determine whether persistent A-site chemistry generally precedes loss of neighboring local K–Cl coordination and which persistent first-exit operations predominate across the matched materials.",
-    "scope": "Atom-resolved analysis of 1666 K trajectories and 300 K references for three A-site variants. Local event ordering and reaction-operation distributions are descriptive, not causal or bulk-structure claims; no exact published fraction is requested."
+    "scope": "Analysis-level reproduction from genuine, bundled 1666 K event observations for three A-site variants. Local ordering and reaction-operation distributions are descriptive, not causal or bulk-structure claims; no exact published fraction is requested."
   },
   "assets": [
     {
-      "name": "Atom-identified initial structures and 300 K reference frames for DAP-2, PAP-2 and PAP-H2",
+      "name": "Atom-identified 1666 K event observations",
       "type": "dataset",
-      "description": "Define original A-site parents, persistent K–Cl reference geometry and the fixed A-to-K neighborhood."
-    },
-    {
-      "name": "Nine atom-identified 1666 K heating trajectories",
-      "type": "dataset",
-      "description": "Three independent 10 fs trajectories per material provide chemical and geometry time series."
-    },
-    {
-      "name": "Molecular-graph and trajectory-analysis tools",
-      "type": "tool",
-      "description": "Construct sampled molecular identities, reaction operations and K–Cl coordination histories from trajectory frames; portable open-source implementations or equivalents are acceptable."
+      "description": "Three compact CSVs at https://github.com/SchrodingersCattt/pap-h2-research-arm/tree/main/task/data: exits.csv records atom-identified persistent first exits and their operations, neighborhoods.csv maps each A site to eight K units, and k_sites.csv records independently computed K–Cl6 persistent loss onsets. Download these real source records to reproduce the event-level analysis."
     }
   ],
   "workflow": [
     {
       "id": "s1",
-      "title": "Recover persistent A-site first exits",
+      "title": "Validate atom-identified source events",
       "role": "process",
-      "action": "From atom-resolved molecular histories, identify each frame-zero parent and the onset of its first continuous 500 fs absence; classify its onset bond operation.",
-      "evidence": "Per-site exit-onset and operation records"
+      "action": "Check the one-to-one A-site heavy-atom join, nine complete 192-site seeds, eight distinct neighbors per site and explicit 500 fs support-loss onset/censoring fields.",
+      "evidence": "Input consistency checks"
     },
     {
       "id": "s2",
-      "title": "Recover independent local coordination timing",
-      "role": "process",
-      "action": "Using the 300 K K–Cl reference and fixed atom IDs, detect 500 fs persistent coordination loss in neighboring K units on the geometry sampling grid.",
-      "evidence": "Per-neighbor coordination-onset records"
-    },
-    {
-      "id": "s3",
       "title": "Join chemical and local-support events",
       "role": "scored",
       "output_file": "/app/outputs/site_events.csv",
-      "action": "Join the chemical first exit of each A site to the median coordination-loss onset of its eight fixed neighboring K units; retain each site even when an event is right-censored."
+      "action": "Join each recorded chemical first exit to the median 500 fs coordination-loss onset among its eight fixed neighboring K units; retain each site and its support censoring."
     },
     {
-      "id": "s4",
+      "id": "s3",
       "title": "Summarize the material-level claim",
       "role": "scored",
       "output_file": "/app/outputs/summary.json",

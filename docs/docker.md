@@ -43,9 +43,10 @@ Mount the repository to work with files without baking data into the image:
 docker run --rm -it --mount "type=bind,source=$((Get-Location).Path),target=/app" -w /app pap-h2-arm-base /bin/bash
 ```
 
-Inside that shell, use the task specification and input contract to obtain
-inputs and generate `/app/outputs/site_events.csv` and
-`/app/outputs/summary.json`. A bind mount keeps those outputs on the host;
+Inside that shell, run
+`python3 scripts/reproduce.py --inputs task/data --output /app/outputs` to
+generate `/app/outputs/site_events.csv` and `/app/outputs/summary.json` from
+the bundled event observations. A bind mount keeps the outputs on the host;
 `outputs/` is ignored by Git. Running the base image alone does not execute
 the task or score its outputs.
 
