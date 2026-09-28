@@ -1,0 +1,16 @@
+# The public source repository carries the task interface, not acquired data.
+inputs/
+outputs/
+downloads/
+*.lammpstrj
+*.pt
+*.pt2
+*.ckpt
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.key
+*.pem
+.env
+.env.*
