@@ -1,22 +1,22 @@
 {
   "schema_version": "1.0",
-  "title": "Chemical first exits and neighboring coordination loss in energetic perovskites",
-  "problem_background": "In a family of energetic perovskites sharing the potassium-perchlorate sublattice, changes at the molecular A site can be resolved separately from loss of neighboring local coordination. An atom-resolved comparison of recorded events can determine the ordering of these two processes without interpreting local coordination loss as bulk lattice collapse.",
+  "title": "Chemistry before local support loss in energetic perovskites",
+  "problem_background": "In DAP-2, PAP-2, and PAP-H2 the potassium and perchlorate sublattices are fixed and only the A-site cation changes. Atom-identified records can show whether persistent A-site chemistry precedes loss of neighboring local [K(ClO4)6] support, and which exact first-exit classes account for the initial A-site population. Local support loss is not bulk framework collapse, and a net N-H loss operation does not identify the hydrogen acceptor.",
   "environment": {
     "stack_hint": "Python standard library for atom-identified event records",
     "internet": true,
     "outputs_dir": "/app/outputs"
   },
-  "approach": "For DAP-2, PAP-2 and PAP-H2, analyze three seeds per material at 1666 K using the bundled atom-identified first-exit, A-to-K neighborhood and K–Cl6 persistent-loss records. Verify the A-site heavy-atom join and each fixed eight-K neighborhood. Compute the median of its neighbors' 500 fs persistent loss onsets and compare it with the recorded 500 fs persistent chemical first-exit onset. Preserve right-censoring and aggregate by seed before material; neighboring A sites are not independent replicas.",
+  "approach": "For DAP-2, PAP-2 and PAP-H2, analyze three seeds per material at 1666 K using the bundled atom-identified first-exit, A-to-K neighborhood and K-site persistent-loss records. Verify the A-site heavy-atom join and each fixed eight-K neighborhood. Define t_chem from the recorded 500 fs persistent chemical first-exit onset and t_support as the median 500 fs persistent [K(ClO4)6] loss onset among its eight neighbors. Preserve right-censoring. Aggregate ordering and exact-operation branch shares by seed before material; neighboring A sites are not independent replicas.",
   "reproduction_target": {
-    "summary": "Determine whether persistent A-site chemistry generally precedes loss of neighboring local K–Cl coordination and which persistent first-exit operations predominate across the matched materials.",
-    "scope": "Analysis-level reproduction from genuine, bundled 1666 K event observations for three A-site variants. Local ordering and reaction-operation distributions are descriptive, not causal or bulk-structure claims; no exact published fraction is requested."
+    "summary": "Recompute whether persistent A-site chemistry precedes neighboring local [K(ClO4)6] support loss, and whether exact single N-H loss is the largest persistent first-exit class in each material.",
+    "scope": "Analysis-level reproduction from genuine, bundled 1666 K event observations for three A-site variants. Report pooled, material, and seed ordering fractions, with equal times counted separately from the strict inequality, and seed-mean branch shares for the exact single-operation classes. Do not copy a published percentage. The result is a local timing and branch comparison. It does not rerun trajectories, assign the hydrogen acceptor, or support Arrhenius, CShM, or experimental thermal claims."
   },
   "assets": [
     {
       "name": "Atom-identified 1666 K event observations",
       "type": "dataset",
-      "description": "Three compact CSVs at https://github.com/SchrodingersCattt/pap-h2-research-arm/tree/main/task/data: exits.csv records atom-identified persistent first exits and their operations, neighborhoods.csv maps each A site to eight K units, and k_sites.csv records independently computed K–Cl6 persistent loss onsets. Download these real source records to reproduce the event-level analysis."
+      "description": "Three compact CSVs at https://github.com/SchrodingersCattt/pap-h2-research-arm/tree/main/task/data: exits.csv records atom-identified persistent first exits and their operations, neighborhoods.csv maps each A site to eight K units, and k_sites.csv records independently computed [K(ClO4)6] persistent loss onsets. Download these real source records to reproduce the event-level analysis."
     }
   ],
   "workflow": [
@@ -24,7 +24,7 @@
       "id": "s1",
       "title": "Validate atom-identified source events",
       "role": "process",
-      "action": "Check the one-to-one A-site heavy-atom join, nine complete 192-site seeds, eight distinct neighbors per site and explicit 500 fs support-loss onset/censoring fields.",
+      "action": "Check the one-to-one A-site heavy-atom join, nine complete 192-site seeds, eight distinct neighbors per site, and explicit 500 fs support-loss onset and censoring fields. Chemical onsets use the 10 fs grid and support onsets use the 100 fs grid.",
       "evidence": "Input consistency checks"
     },
     {
@@ -32,14 +32,14 @@
       "title": "Join chemical and local-support events",
       "role": "scored",
       "output_file": "/app/outputs/site_events.csv",
-      "action": "Join each recorded chemical first exit to the median 500 fs coordination-loss onset among its eight fixed neighboring K units; retain each site and its support censoring."
+      "action": "Join each recorded chemical first exit to the median 500 fs [K(ClO4)6] loss onset among its eight fixed neighboring K units. Retain each site, its exact operation, and its support censoring."
     },
     {
       "id": "s3",
-      "title": "Summarize the material-level claim",
+      "title": "Summarize ordering and first-exit branches",
       "role": "scored",
       "output_file": "/app/outputs/summary.json",
-      "action": "Compute material- and seed-resolved ordering and first-exit operation distributions from the per-site records and state the supported qualitative pattern."
+      "action": "From the per-site records, recompute pooled, material, and seed fractions with t_chem < t_support, count equal times separately, and report seed-mean branch shares for exact single N-H loss, the material-specific C-H classes, C-N opening, and the remaining compound exits. State only the qualitative pattern those records support."
     }
   ],
   "outputs": [
@@ -48,7 +48,7 @@
       "format": "csv",
       "purpose": "scored",
       "target_policy": "structural_audit",
-      "description": "One row per initial A site with atom-linked first-exit and neighborhood support-loss timing, explicit censoring and operation identity.",
+      "description": "One row per initial A site with atom-linked first-exit and neighborhood support-loss timing, explicit censoring, and exact operation identity.",
       "schema": {
         "required_columns": ["material", "seed", "site_id", "chemical_onset_ps", "support_onset_ps", "support_right_censored", "first_exit_operation"],
         "units": {"chemical_onset_ps": "ps", "support_onset_ps": "ps"}
@@ -59,14 +59,14 @@
       "format": "json",
       "purpose": "scored",
       "target_policy": "reference_match",
-      "description": "Seed-resolved ordering and reaction-operation distributions recomputed from site_events.csv, plus a qualitative interpretation within local-coordination scope.",
+      "description": "Ordering fractions and exact-operation branch shares recomputed from site_events.csv, plus an interpretation limited to local [K(ClO4)6] support.",
       "schema": {
-        "required": ["per_seed", "per_material", "interpretation"]
+        "required": ["pooled", "per_seed", "per_material", "interpretation"]
       }
     }
   ],
   "scoring": {
-    "summary": "Evaluate per-site event coverage and consistency; derive material- and seed-resolved distributions from the site records and assess whether the qualitative interpretation follows."
+    "summary": "Recompute coverage, ordering fractions, equality counts, and branch shares from the site records. Accept the interpretation only when it follows those recomputed records and stays inside local-support scope."
   },
-  "constraints": "Retain all initial A sites, censoring, the 500 fs chemical and geometric persistence criteria, seed identity and 10 fs versus 100 fs sampling distinction. Do not infer the immediate H acceptor from net N–H loss or call local K–Cl loss bulk framework collapse."
+  "constraints": "Retain all initial A sites, censoring, the 500 fs chemical and geometric persistence criteria, seed identity, and the 10 fs versus 100 fs sampling distinction. Use a denominator of 192 initial A sites per seed for branch shares. Do not infer the hydrogen acceptor from net N-H loss. Do not call local [K(ClO4)6] loss bulk framework collapse."
 }

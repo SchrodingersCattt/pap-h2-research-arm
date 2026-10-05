@@ -3,13 +3,34 @@
 import argparse
 import csv
 import json
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
-from statistics import median
+from statistics import median, stdev
 
 
 MATERIALS = ("DAP-2", "PAP-2", "PAP-H2")
 SEEDS = (26083101, 26083102, 26083103)
+SITE_COUNT = 192
+BRANCH_OPERATIONS = {
+    "DAP-2": {
+        "N-H loss": ("H-:N",),
+        "C-H loss": ("H-:C",),
+        "C-N opening": ("break:C-N_bridge",),
+    },
+    "PAP-2": {
+        "N-H loss": ("H-:N",),
+        "C-H loss": ("H-:C",),
+        "C-N opening": ("break:C-N_equivalent",),
+    },
+    "PAP-H2": {
+        "N-H loss": ("H-:N",),
+        "C2-alpha C-H loss": ("H-:C_short_alpha",),
+        "C3-alpha C-H loss": ("H-:C_long_alpha",),
+        "C3-beta C-H loss": ("H-:C_long_beta",),
+        "C-N opening": ("break:C-N_short_arc", "break:C-N_long_arc"),
+    },
+}
+REMAINDER = "Compound first-exit changes"
 
 
 def read_unique(path: Path, columns: tuple[str, ...], key: tuple[str, ...]) -> dict:
@@ -30,6 +51,57 @@ def atom_ids(value: str) -> set[int]:
     return {int(item) for item in value.split(";") if item}
 
 
+def standard_error(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    return stdev(values) / (len(values) ** 0.5)
+
+
+def branch_shares(material: str, operations: list[str]) -> dict[str, float]:
+    if len(operations) != SITE_COUNT:
+        raise ValueError(f"{material}: branch denominator is not {SITE_COUNT}")
+    classes = BRANCH_OPERATIONS[material]
+    shares = {
+        label: sum(operation in names for operation in operations) / SITE_COUNT
+        for label, names in classes.items()
+    }
+    shares[REMAINDER] = 1.0 - sum(shares.values())
+    return shares
+
+
+def supported_interpretation(summary: dict) -> str:
+    per_seed = summary["per_seed"]
+    per_material = summary["per_material"]
+    chemistry_precedes = all(row["chemistry_first_fraction"] > 0.5 for row in per_seed)
+    nh_largest = all(
+        row["branches"]["N-H loss"]["seed_mean_share"]
+        > max(
+            share["seed_mean_share"]
+            for label, share in row["branches"].items()
+            if label != "N-H loss"
+        )
+        for row in per_material
+    )
+    if chemistry_precedes and nh_largest:
+        return (
+            "Exact single N-H loss is the largest persistent first-exit class in each material. "
+            "Persistent A-site chemistry precedes the median 500 fs loss of neighboring "
+            "[K(ClO4)6] support. This is a local timing comparison under the shared 500 fs window."
+        )
+    return (
+        "The records do not support both an N-H-majority first-exit distribution and chemistry "
+        "preceding neighboring [K(ClO4)6] support loss."
+    )
+
+
+def interpretation_is_supported(summary: dict) -> bool:
+    text = summary.get("interpretation", "")
+    lowered = text.lower()
+    if "bulk" in lowered or "acceptor" in lowered or "perchlorate" in lowered:
+        return False
+    return text == supported_interpretation(summary)
+
+
 def reproduce(inputs: Path, output: Path) -> dict:
     exits = read_unique(
         inputs / "exits.csv",
@@ -46,8 +118,13 @@ def reproduce(inputs: Path, output: Path) -> dict:
         ("material", "temperature_K", "seed", "k_row", "loss_500fs_start_frame", "loss_500fs_right_censored"),
         ("material", "temperature_K", "seed", "k_row"),
     )
-    expected = {(material, "1666", str(seed), str(site)) for material in MATERIALS for seed in SEEDS for site in range(192)}
-    if set(exits) != expected or set(maps) != expected or len(sites) != 1728:
+    expected = {
+        (material, "1666", str(seed), str(site))
+        for material in MATERIALS
+        for seed in SEEDS
+        for site in range(SITE_COUNT)
+    }
+    if set(exits) != expected or set(maps) != expected or len(sites) != len(expected):
         raise ValueError("input coverage must contain 192 A and K sites for each of nine seeds")
 
     output.mkdir(parents=True, exist_ok=True)
@@ -95,33 +172,63 @@ def reproduce(inputs: Path, output: Path) -> dict:
     per_material = []
     for material in MATERIALS:
         material_rows = []
+        seed_branch_shares = defaultdict(list)
         for seed in SEEDS:
             group = grouped[(material, "1666", str(seed))]
             observed = [row for row in group if row["support_onset_ps"] != "" and not row["support_right_censored"]]
             chemistry_first = sum(row["chemical_onset_ps"] < row["support_onset_ps"] for row in observed)
+            equal_times = sum(row["chemical_onset_ps"] == row["support_onset_ps"] for row in observed)
+            shares = branch_shares(material, [row["first_exit_operation"] for row in group])
+            for label, share in shares.items():
+                seed_branch_shares[label].append(share)
             per_seed.append({
                 "material": material,
                 "seed": seed,
                 "initial_sites": len(group),
                 "observed_pairs": len(observed),
                 "chemistry_first_pairs": chemistry_first,
+                "equality_pairs": equal_times,
                 "chemistry_first_fraction": chemistry_first / len(observed) if observed else None,
+                "branch_shares": shares,
             })
             material_rows.extend(group)
-        counts = Counter(row["first_exit_operation"] for row in material_rows)
-        seed_fractions = [row["chemistry_first_fraction"] for row in per_seed if row["material"] == material]
+        observed_material = [
+            row for row in material_rows if row["support_onset_ps"] != "" and not row["support_right_censored"]
+        ]
+        chemistry_first = sum(row["chemical_onset_ps"] < row["support_onset_ps"] for row in observed_material)
+        equal_times = sum(row["chemical_onset_ps"] == row["support_onset_ps"] for row in observed_material)
+        branches = {}
+        for label, names in (*BRANCH_OPERATIONS[material].items(), (REMAINDER, ())):
+            values = seed_branch_shares[label]
+            branches[label] = {
+                "operations": list(names),
+                "seed_mean_share": sum(values) / len(values),
+                "seed_standard_error": standard_error(values),
+            }
         per_material.append({
             "material": material,
-            "seed_mean_chemistry_first_fraction": sum(seed_fractions) / len(seed_fractions),
-            "leading_operation": counts.most_common(1)[0][0],
-            "operation_counts": dict(sorted(counts.items())),
+            "events": len(observed_material),
+            "chemistry_first_events": chemistry_first,
+            "equality_events": equal_times,
+            "chemistry_first_fraction": chemistry_first / len(observed_material) if observed_material else None,
+            "branches": branches,
         })
-    majority = all(row["chemistry_first_fraction"] > 0.5 for row in per_seed)
-    interpretation = (
-        "Persistent A-site chemistry generally precedes neighboring local K–Cl coordination loss."
-        if majority else "The event ordering differs across seeds."
-    )
-    summary = {"per_seed": per_seed, "per_material": per_material, "interpretation": interpretation}
+
+    observed_all = [row for row in rows if row["support_onset_ps"] != "" and not row["support_right_censored"]]
+    chemistry_first = sum(row["chemical_onset_ps"] < row["support_onset_ps"] for row in observed_all)
+    equal_times = sum(row["chemical_onset_ps"] == row["support_onset_ps"] for row in observed_all)
+    summary = {
+        "pooled": {
+            "events": len(observed_all),
+            "chemistry_first_events": chemistry_first,
+            "equality_events": equal_times,
+            "chemistry_first_fraction": chemistry_first / len(observed_all) if observed_all else None,
+        },
+        "per_seed": per_seed,
+        "per_material": per_material,
+        "interpretation": "",
+    }
+    summary["interpretation"] = supported_interpretation(summary)
     (output / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return summary
 
